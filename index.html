@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MLBB Mech Chrono-Calculator</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Orbitron', 'Arial', sans-serif;
+        }
+        
+        body {
+            background: 
+                radial-gradient(circle at 20% 30%, rgba(40, 40, 60, 0.8) 0%, transparent 50%),
+                radial-gradient(circle at 80% 70%, rgba(30, 40, 70, 0.9) 0%, transparent 50%),
+                linear-gradient(135deg, #0a0a12 0%, #1a1a2e 50%, #16213e 100%);
+            color: #e0e0ff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            overflow-x: hidden;
+            position: relative;
+        }
+        
+        /* HUD Elements */
+        .hud-corner {
+            position: fixed;
+            width: 150px;
+            height: 150px;
+            border: 3px solid #00ffff;
+            opacity: 0.3;
+            z-index: 0;
+        }
+        
+        .hud-corner.tl {
+            top: 20px;
+            left: 20px;
+            border-right: none;
+            border-bottom: none;
+        }
+        
+        .hud-corner.tr {
+            top: 20px;
+            right: 20px;
+            border-left: none;
+            border-bottom: none;
+        }
+        
+        .hud-corner.bl {
+            bottom: 20px;
+            left: 20px;
+            border-right: none;
+            border-top: none;
+        }
+        
+        .hud-corner.br {
+            bottom: 20px;
+            right: 20px;
+            border-left: none;
+            border-top: none;
+        }
+        
+        .scan-line {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #00ffff, #ff00ff, transparent);
+            animation: scan 4s linear infinite;
+            z-index: 1;
+            opacity: 0.7;
+        }
+        
+        @keyframes scan {
+            0% { top: 0%; }
+            100% { top: 100%; }
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 1000px;
+            background: rgba(10, 15, 30, 0.85);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 
+                0 0 30px rgba(0, 150, 255, 0.3),
+                0 10px 40px rgba(0, 0, 0, 0.7),
+                inset 0 0 20px rgba(0, 150, 255, 0.1);
+            border: 2px solid rgba(0, 150, 255, 0.5);
+            position: relative;
+            z-index: 2;
+        }
+        
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #ff0080, #00ffff, #ff0080);
+            z-index: 3;
+        }
+        
+        .header {
+            background: 
+                linear-gradient(90deg, rgba(20, 25, 50, 0.9), rgba(30, 40, 70, 0.9)),
+                url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect width="100" height="100" fill="none"/><path d="M20,20 L80,20 L80,80 L20,80 Z" stroke="rgba(0,150,255,0.1)" stroke-width="2" fill="none"/><path d="M30,30 L70,30 L70,70 L30,70 Z" stroke="rgba(0,150,255,0.1)" stroke-width="1" fill="none"/></svg>');
+            padding: 25px 40px;
+            border-bottom: 2px solid rgba(0, 150, 255, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .header::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #00ffff, #ff00ff, #00ffff, transparent);
+        }
+        
+        h1 {
+            color: #00ffff;
+            font-size: 2.8rem;
+            margin-bottom: 10px;
+            text-shadow: 
+                0 0 10px #00ffff,
+                0 0 20px rgba(0, 255, 255, 0.5);
+            letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            position: relative;
+        }
+        
+        h1::before {
+            content: '⚙';
+            font-size: 2.5rem;
+            color: #ff0080;
+            text-shadow: 0 0 15px #ff0080;
+        }
+        
+        h1::after {
+            content: '⚙';
+            font-size: 2.5rem;
+            color: #ff0080;
+            text-shadow: 0 0 15px #ff0080;
+        }
+        
+        .subtitle {
+            color: #a0a0ff;
+            font-size: 1.2rem;
+            letter-spacing: 1px;
+            font-weight: 300;
+            text-transform: uppercase;
+        }
+        
+        .content {
+            padding: 30px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            background: 
+                linear-gradient(135deg, rgba(15, 20, 40, 0.9) 0%, rgba(25, 30, 60, 0.9) 100%),
+                url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60"><rect width="60" height="60" fill="none"/><path d="M0,30 L60,30 M30,0 L30,60" stroke="rgba(0,100,255,0.05)" stroke-width="1"/></svg>');
+        }
+        
+        @media (max-width: 900px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .input-section, .output-section {
+            padding: 25px;
+            background: rgba(10, 15, 35, 0.8);
+            border-radius: 8px;
+            border: 1px solid rgba(0, 150, 255, 0.3);
+            box-shadow: 
+                inset 0 0 20px rgba(0, 0, 0, 0.5),
+                0 5px 15px rgba(0, 0, 0, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .input-section::before, .output-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                linear-gradient(90deg, transparent, rgba(0, 150, 255, 0.05), transparent);
+            z-index: 0;
+        }
+        
+        .section-title {
+            color: #ff0080;
+            font-size: 1.6rem;
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid rgba(0, 150, 255, 0.5);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            position: relative;
+            z-index: 1;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .section-title i {
+            color: #00ffff;
+            font-size: 1.4rem;
+        }
+        
+        .input-group {
+            margin-bottom: 25px;
+            position: relative;
+            z-index: 1;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 12px;
+            color: #a0a0ff;
+            font-weight: 500;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .mech-input {
+            width: 100%;
+            padding: 18px 20px;
+            background: rgba(5, 10, 25, 0.9);
+            border: 2px solid rgba(0, 150, 255, 0.5);
+            border-radius: 6px;
+            color: #00ffff;
+            font-size: 1.1rem;
+            transition: all 0.3s;
+            font-family: 'Orbitron', monospace;
+            letter-spacing: 1px;
+        }
+        
+        .mech-input:focus {
+            outline: none;
+            border-color: #ff0080;
+            box-shadow: 
+                0 0 20px rgba(255, 0, 128, 0.5),
+                inset 0 0 10px rgba(255, 0, 128, 0.2);
+        }
+        
+        .datetime-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 500px) {
+            .datetime-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .count-input-container {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+        
+        .count-input {
+            flex: 1;
+        }
+        
+        .unit-select {
+            width: 140px;
+            background: rgba(5, 10, 25, 0.9);
+            border: 2px solid rgba(0, 150, 255, 0.5);
+            color: #00ffff;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Orbitron', monospace;
+            cursor: pointer;
+        }
+        
+        .unit-select option {
+            background: #050a19;
+            color: #00ffff;
+        }
+        
+        .output-display {
+            background: linear-gradient(135deg, rgba(5, 10, 25, 0.9), rgba(10, 20, 50, 0.9));
+            border-radius: 8px;
+            padding: 30px 25px;
+            border: 2px solid rgba(0, 150, 255, 0.5);
+            text-align: center;
+            margin-top: 20px;
+            transition: all 0.4s;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+        
+        .output-display::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(45deg, transparent, rgba(0, 150, 255, 0.1), transparent);
+            z-index: -1;
+        }
+        
+        .output-display.active {
+            border-color: #ff0080;
+            box-shadow: 
+                0 0 30px rgba(255, 0, 128, 0.4),
+                inset 0 0 20px rgba(255, 0, 128, 0.1);
+        }
+        
+        .output-label {
+            color: #a0a0ff;
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        
+        .expiry-date {
+            font-size: 2.2rem;
+            color: #00ffff;
+            font-weight: 700;
+            margin-bottom: 15px;
+            text-shadow: 
+                0 0 10px #00ffff,
+                0 0 20px rgba(0, 255, 255, 0.5);
+            letter-spacing: 1px;
+        }
+        
+        .expiry-time {
+            font-size: 1.8rem;
+            color: #ff0080;
+            font-weight: 600;
+            margin-bottom: 10px;
+            text-shadow: 0 0 10px rgba(255, 0, 128, 0.5);
+            letter-spacing: 1px;
+        }
+        
+        .remaining-time {
+            margin-top: 25px;
+            padding-top: 25px;
+            border-top: 2px solid rgba(0, 150, 255, 0.5);
+        }
+        
+        .remaining-label {
+            color: #a0a0ff;
+            margin-bottom: 12px;
+            font-size: 1.1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .remaining-value {
+            font-size: 1.5rem;
+            color: #ffff00;
+            font-weight: 600;
+            text-shadow: 0 0 10px rgba(255, 255, 0, 0.5);
+            font-family: 'Orbitron', monospace;
+            letter-spacing: 2px;
+        }
+        
+        .footer {
+            padding: 20px;
+            text-align: center;
+            color: #6060a0;
+            font-size: 1rem;
+            border-top: 2px solid rgba(0, 150, 255, 0.3);
+            background: rgba(10, 15, 35, 0.9);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        
+        .glow {
+            animation: glow-pulse 2s infinite alternate;
+        }
+        
+        @keyframes glow-pulse {
+            from {
+                text-shadow: 0 0 10px #00ffff, 0 0 20px rgba(0, 255, 255, 0.5);
+            }
+            to {
+                text-shadow: 0 0 15px #00ffff, 0 0 30px rgba(0, 255, 255, 0.8), 0 0 40px rgba(0, 255, 255, 0.5);
+            }
+        }
+        
+        .instruction-box {
+            background: rgba(0, 30, 60, 0.6);
+            border-radius: 6px;
+            padding: 20px;
+            border: 1px solid rgba(0, 150, 255, 0.3);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .instruction-box p {
+            margin-bottom: 10px;
+            color: #c0c0ff;
+        }
+        
+        .instruction-box p:last-child {
+            margin-bottom: 0;
+        }
+        
+        .calculation-box {
+            background: rgba(0, 30, 60, 0.6);
+            border-radius: 6px;
+            padding: 25px;
+            border: 1px solid rgba(0, 150, 255, 0.3);
+            min-height: 120px;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .calculation-box p {
+            margin-bottom: 10px;
+            color: #c0c0ff;
+        }
+        
+        .calculation-box p:last-child {
+            margin-bottom: 0;
+        }
+        
+        .calculation-box strong {
+            color: #00ffff;
+        }
+        
+        .pulse {
+            animation: critical-pulse 1s infinite;
+        }
+        
+        @keyframes critical-pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .damage-warning {
+            color: #ff5555 !important;
+            text-shadow: 0 0 10px #ff0000 !important;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background: #00ff00;
+            border-radius: 50%;
+            margin-right: 10px;
+            box-shadow: 0 0 10px #00ff00;
+            animation: status-pulse 2s infinite;
+        }
+        
+        @keyframes status-pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .warning-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background: #ffaa00;
+            border-radius: 50%;
+            margin-right: 10px;
+            box-shadow: 0 0 10px #ffaa00;
+            animation: warning-pulse 1s infinite;
+        }
+        
+        @keyframes warning-pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.3; }
+            100% { opacity: 1; }
+        }
+        
+        .critical-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            background: #ff0000;
+            border-radius: 50%;
+            margin-right: 10px;
+            box-shadow: 0 0 15px #ff0000;
+            animation: critical-pulse 0.5s infinite;
+        }
+        
+        .mech-grid {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 150, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 150, 255, 0.05) 1px, transparent 1px);
+            background-size: 30px 30px;
+            top: 0;
+            left: 0;
+            z-index: 0;
+        }
+        
+        .button-panel {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .mech-button {
+            padding: 12px 25px;
+            background: linear-gradient(135deg, #0066cc, #0099ff);
+            border: none;
+            border-radius: 4px;
+            color: white;
+            font-family: 'Orbitron', monospace;
+            font-weight: 600;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(0, 100, 255, 0.3);
+        }
+        
+        .mech-button:hover {
+            background: linear-gradient(135deg, #ff0080, #ff3399);
+            box-shadow: 0 5px 20px rgba(255, 0, 128, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        .mech-button:active {
+            transform: translateY(0);
+        }
+        
+        /* MLBB-inspired damage numbers effect */
+        .damage-number {
+            position: absolute;
+            color: #ff5555;
+            font-weight: bold;
+            font-size: 1.5rem;
+            text-shadow: 0 0 10px #ff0000;
+            pointer-events: none;
+            z-index: 100;
+            animation: float-up 1s forwards;
+        }
+        
+        @keyframes float-up {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-50px); opacity: 0; }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="scan-line"></div>
+    <div class="hud-corner tl"></div>
+    <div class="hud-corner tr"></div>
+    <div class="hud-corner bl"></div>
+    <div class="hud-corner br"></div>
+    
+    <div class="container">
+        <div class="header">
+            <h1>MECHA-CALCULATOR</h1>
+            <p class="subtitle">Temporal Computation System</p>
+        </div>
+        
+        <div class="content">
+            <div class="mech-grid"></div>
+            <div class="input-section">
+                <h2 class="section-title"><i class="fas fa-microchip"></i> System Input</h2>
+                
+                <div class="input-group">
+                    <label for="startDate"><i class="fas fa-calendar-alt"></i> Initiation Date</label>
+                    <input type="date" id="startDate" class="mech-input">
+                </div>
+                
+                <div class="input-group">
+                    <label for="startTime"><i class="fas fa-clock"></i> Initiation Time (24H)</label>
+                    <div class="datetime-container">
+                        <input type="time" id="startTime" class="mech-input" value="00:00">
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label for="countValue"><i class="fas fa-bolt"></i> Duration Parameter (1-999)</label>
+                    <div class="count-input-container">
+                        <input type="number" id="countValue" class="mech-input count-input" min="1" max="999" value="30">
+                        <select id="timeUnit" class="unit-select">
+                            <option value="days">Solar Days</option>
+                            <option value="weeks">Cybernetic Weeks</option>
+                            <option value="months">Lunar Cycles</option>
+                            <option value="years">Orbital Years</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="input-group">
+                    <label><i class="fas fa-info-circle"></i> Operational Protocol</label>
+                    <div class="instruction-box">
+                        <p><span class="status-indicator"></span> Select temporal initiation point</p>
+                        <p><span class="status-indicator"></span> Input duration parameter (1-999)</p>
+                        <p><span class="status-indicator"></span> Define temporal measurement unit</p>
+                        <p><span class="status-indicator"></span> Expiry chronology computed in real-time</p>
+                        <p style="color: #00ffff; margin-top: 10px;">All temporal data in 24-hour combat format</p>
+                    </div>
+                </div>
+                
+                <div class="button-panel">
+                    <button class="mech-button" onclick="calculateExpiry()">
+                        <i class="fas fa-cogs"></i> Compute
+                    </button>
+                    <button class="mech-button" onclick="resetCalculator()">
+                        <i class="fas fa-redo"></i> Reset
+                    </button>
+                </div>
+            </div>
+            
+            <div class="output-section">
+                <h2 class="section-title"><i class="fas fa-satellite-dish"></i> Temporal Output</h2>
+                
+                <div class="output-display" id="outputDisplay">
+                    <div class="output-label">Expiry Chrono-coordinates</div>
+                    <div class="expiry-date" id="expiryDate">-- -- ----</div>
+                    <div class="expiry-time" id="expiryTime">--:--</div>
+                    
+                    <div class="remaining-time">
+                        <div class="remaining-label">Temporal Remaining To Expiry</div>
+                        <div class="remaining-value" id="remainingTime">
+                            <span class="warning-indicator"></span> --
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="input-group" style="margin-top: 30px;">
+                    <label><i class="fas fa-brain"></i> Calculation Matrix</label>
+                    <div class="calculation-box" id="calculationDetails">
+                        <p><span class="status-indicator"></span> System standby. Awaiting parameters...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>MLBB MECHA TEMPORAL SYSTEMS © 2023 | COMBAT-READY CHRONO-COMPUTATION | VER 3.7.1</p>
+        </div>
+    </div>
+
+    <script>
+        // DOM elements
+        const startDateInput = document.getElementById('startDate');
+        const startTimeInput = document.getElementById('startTime');
+        const countValueInput = document.getElementById('countValue');
+        const timeUnitSelect = document.getElementById('timeUnit');
+        const expiryDateElement = document.getElementById('expiryDate');
+        const expiryTimeElement = document.getElementById('expiryTime');
+        const remainingTimeElement = document.getElementById('remainingTime');
+        const outputDisplay = document.getElementById('outputDisplay');
+        const calculationDetails = document.getElementById('calculationDetails');
+        
+        // Set default start date to today
+        const today = new Date();
+        const formattedDate = today.toISOString().split('T')[0];
+        startDateInput.value = formattedDate;
+        
+        // Set default start time to current time (24-hour format)
+        const hours = String(today.getHours()).padStart(2, '0');
+        const minutes = String(today.getMinutes()).padStart(2, '0');
+        startTimeInput.value = `${hours}:${minutes}`;
+        
+        // Initialize the calculation
+        calculateExpiry();
+        
+        // Add event listeners for real-time updates
+        startDateInput.addEventListener('input', calculateExpiry);
+        startTimeInput.addEventListener('input', calculateExpiry);
+        countValueInput.addEventListener('input', calculateExpiry);
+        timeUnitSelect.addEventListener('change', calculateExpiry);
+        
+        // Function to create MLBB-style damage number effect
+        function createDamageEffect(value, element) {
+            const damageNum = document.createElement('div');
+            damageNum.className = 'damage-number';
+            damageNum.textContent = value;
+            
+            const rect = element.getBoundingClientRect();
+            damageNum.style.left = `${rect.left + rect.width/2}px`;
+            damageNum.style.top = `${rect.top}px`;
+            
+            document.body.appendChild(damageNum);
+            
+            // Remove after animation
+            setTimeout(() => {
+                damageNum.remove();
+            }, 1000);
+        }
+        
+        // Function to calculate expiry date
+        function calculateExpiry() {
+            // Get input values
+            const startDate = new Date(startDateInput.value);
+            const startTime = startTimeInput.value;
+            
+            // Parse time
+            const [hours, minutes] = startTime.split(':').map(Number);
+            startDate.setHours(hours, minutes, 0, 0);
+            
+            let count = parseInt(countValueInput.value) || 1;
+            const unit = timeUnitSelect.value;
+            
+            // Validate count
+            if (count < 1) {
+                count = 1;
+                countValueInput.value = 1;
+            }
+            if (count > 999) {
+                count = 999;
+                countValueInput.value = 999;
+                // Create visual feedback for max value
+                createDamageEffect("MAX", countValueInput);
+            }
+            
+            // Calculate expiry date based on unit
+            const expiryDate = new Date(startDate);
+            
+            switch(unit) {
+                case 'days':
+                    expiryDate.setDate(expiryDate.getDate() + count);
+                    break;
+                case 'weeks':
+                    expiryDate.setDate(expiryDate.getDate() + (count * 7));
+                    break;
+                case 'months':
+                    expiryDate.setMonth(expiryDate.getMonth() + count);
+                    break;
+                case 'years':
+                    expiryDate.setFullYear(expiryDate.getFullYear() + count);
+                    break;
+            }
+            
+            // Update the display
+            updateDisplay(startDate, expiryDate, count, unit);
+            
+            // Update remaining time
+            updateRemainingTime(expiryDate);
+            
+            // Add active class to output display
+            outputDisplay.classList.add('active');
+            
+            // Update calculation details
+            updateCalculationDetails(startDate, expiryDate, count, unit);
+            
+            // Play sound effect (simulated)
+            playSoundEffect();
+        }
+        
+        // Function to play simulated sound effect
+        function playSoundEffect() {
+            // In a real implementation, you would play an actual sound file
+            // For this demo, we'll just create a visual effect
+            const outputDisplay = document.getElementById('outputDisplay');
+            outputDisplay.style.transform = 'scale(1.02)';
+            setTimeout(() => {
+                outputDisplay.style.transform = 'scale(1)';
+            }, 150);
+        }
+        
+        // Function to update the display with expiry date (24-hour format)
+        function updateDisplay(startDate, expiryDate, count, unit) {
+            // Format the expiry date in a mech/MLBB style
+            const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+            const formattedDate = expiryDate.toLocaleDateString('en-US', options);
+            expiryDateElement.textContent = formattedDate.toUpperCase();
+            
+            // Format the expiry time in 24-hour format
+            const hours24 = String(expiryDate.getHours()).padStart(2, '0');
+            const minutes = String(expiryDate.getMinutes()).padStart(2, '0');
+            const formattedTime = `${hours24}:${minutes}`;
+            expiryTimeElement.textContent = formattedTime;
+            
+            // Add glow effect
+            expiryDateElement.classList.add('glow');
+            setTimeout(() => expiryDateElement.classList.remove('glow'), 1000);
+        }
+        
+        // Function to update remaining time with MLBB-style formatting
+        function updateRemainingTime(expiryDate) {
+            const now = new Date();
+            const diffMs = expiryDate - now;
+            
+            const remainingIndicator = remainingTimeElement.querySelector('.warning-indicator') || 
+                                       remainingTimeElement.querySelector('.critical-indicator') ||
+                                       remainingTimeElement.querySelector('.status-indicator');
+            
+            if (diffMs <= 0) {
+                remainingTimeElement.innerHTML = `<span class="critical-indicator"></span> TEMPORAL EXPIRY REACHED`;
+                remainingTimeElement.classList.add('damage-warning');
+                remainingTimeElement.classList.add('pulse');
+                return;
+            } else {
+                remainingTimeElement.classList.remove('damage-warning');
+                remainingTimeElement.classList.remove('pulse');
+            }
+            
+            const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+            const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+            const diffSeconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+            
+            // Update indicator based on time remaining
+            if (remainingIndicator) {
+                if (diffDays < 1) {
+                    // Less than 1 day remaining - warning
+                    remainingIndicator.className = 'warning-indicator';
+                } else if (diffDays < 7) {
+                    // Less than 1 week remaining - caution
+                    remainingIndicator.className = 'warning-indicator';
+                } else {
+                    // More than 1 week - normal
+                    remainingIndicator.className = 'status-indicator';
+                }
+            }
+            
+            let remainingText = "";
+            
+            if (diffDays > 0) {
+                remainingText += `${diffDays}d `;
+            }
+            
+            if (diffHours > 0 || diffDays > 0) {
+                remainingText += `${diffHours}h `;
+            }
+            
+            if (diffMinutes > 0 || diffHours > 0 || diffDays > 0) {
+                remainingText += `${diffMinutes}m `;
+            }
+            
+            remainingText += `${diffSeconds}s`;
+            
+            if (remainingIndicator) {
+                remainingTimeElement.innerHTML = `${remainingIndicator.outerHTML} ${remainingText}`;
+            } else {
+                remainingTimeElement.textContent = remainingText;
+            }
+        }
+        
+        // Function to update calculation details with MLBB-style text
+        function updateCalculationDetails(startDate, expiryDate, count, unit) {
+            // Format dates and times in 24-hour format
+            const formatDateTime24 = (date) => {
+                const day = date.getDate();
+                const month = date.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+                const year = date.getFullYear();
+                const hours24 = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                return `${month} ${day}, ${year} ${hours24}:${minutes}`;
+            };
+            
+            const startFormatted = formatDateTime24(startDate);
+            const expiryFormatted = formatDateTime24(expiryDate);
+            const unitSingular = unit.substring(0, unit.length - 1);
+            
+            // Calculate difference in days for additional info
+            const diffTime = Math.abs(expiryDate - startDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            // MLBB-style unit names
+            const unitDisplayNames = {
+                'days': 'SOLAR DAYS',
+                'weeks': 'CYBERNETIC WEEKS', 
+                'months': 'LUNAR CYCLES',
+                'years': 'ORBITAL YEARS'
+            };
+            
+            calculationDetails.innerHTML = `
+                <p><span class="status-indicator"></span> <strong>TEMPORAL ORIGIN:</strong> ${startFormatted}</p>
+                <p><span class="status-indicator"></span> <strong>DURATION:</strong> ${count} ${unitDisplayNames[unit]}</p>
+                <p><span class="status-indicator"></span> <strong>EXPIRY COORDINATES:</strong> ${expiryFormatted}</p>
+                <p><span class="status-indicator"></span> <strong>TOTAL TEMPORAL SPAN:</strong> ${diffDays} SOLAR DAYS</p>
+            `;
+        }
+        
+        // Function to reset calculator
+        function resetCalculator() {
+            // Reset to current date and time
+            const today = new Date();
+            const formattedDate = today.toISOString().split('T')[0];
+            startDateInput.value = formattedDate;
+            
+            const hours = String(today.getHours()).padStart(2, '0');
+            const minutes = String(today.getMinutes()).padStart(2, '0');
+            startTimeInput.value = `${hours}:${minutes}`;
+            
+            countValueInput.value = 30;
+            timeUnitSelect.value = 'days';
+            
+            // Create reset effect
+            createDamageEffect("RESET", startDateInput);
+            
+            // Recalculate
+            calculateExpiry();
+        }
+        
+        // Update remaining time every second for more precision
+        setInterval(() => {
+            if (expiryDateElement.textContent !== '-- -- ----') {
+                try {
+                    // Parse the date from the displayed text
+                    const dateText = expiryDateElement.textContent;
+                    const dateParts = dateText.split(' ');
+                    
+                    if (dateParts.length >= 4) {
+                        const monthName = dateParts[1];
+                        const day = parseInt(dateParts[2].replace(',', ''));
+                        const year = parseInt(dateParts[3]);
+                        
+                        // Convert month name to number
+                        const monthMap = {
+                            'JAN': 0, 'FEB': 1, 'MAR': 2, 'APR': 3, 'MAY': 4, 'JUN': 5,
+                            'JUL': 6, 'AUG': 7, 'SEP': 8, 'OCT': 9, 'NOV': 10, 'DEC': 11
+                        };
+                        
+                        const month = monthMap[monthName.toUpperCase()] || 0;
+                        
+                        const expiryDate = new Date(year, month, day);
+                        
+                        // Add the time
+                        const timeParts = expiryTimeElement.textContent.split(':');
+                        expiryDate.setHours(parseInt(timeParts[0]), parseInt(timeParts[1]), 0, 0);
+                        
+                        updateRemainingTime(expiryDate);
+                    }
+                } catch (e) {
+                    console.log("Error parsing date for update");
+                }
+            }
+        }, 1000);
+    </script>
+</body>
+</html>
